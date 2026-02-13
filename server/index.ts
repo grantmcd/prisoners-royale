@@ -18,7 +18,7 @@ app.use('/api', apiRoutes)
 
 // Serve static files from the React app build
 // In production (docker), structure is dist/server and dist/client
-// So from dist/server/index.js, we go ../client
+// The path should be relative to the PROJECT ROOT (/app) or calculated correctly
 app.use(express.static(path.join(__dirname, '../client')))
 
 // The "catchall" handler: for any request that doesn't match above, send back React's index.html
