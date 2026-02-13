@@ -18,7 +18,7 @@ ingress:
     - host: prisoners.tail05ac3b.ts.net
       paths:
         - path: /
-          pathType: ImplementationSpecific
+          pathType: Prefix
 
 env:
   DATABASE_URL: "postgres://postgres:postgres@postgres-rw.cloudnative-pg.svc.cluster.local:5432/prisoners"

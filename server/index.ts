@@ -17,11 +17,13 @@ app.use(express.json())
 app.use('/api', apiRoutes)
 
 // Serve static files from the React app build
-app.use(express.static(path.join(__dirname, '../dist/client')))
+// In production (docker), structure is dist/server and dist/client
+// So from dist/server/index.js, we go ../client
+app.use(express.static(path.join(__dirname, '../client')))
 
 // The "catchall" handler: for any request that doesn't match above, send back React's index.html
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/client/index.html'))
+  res.sendFile(path.join(__dirname, '../client/index.html'))
 })
 
 app.listen(PORT, () => {
