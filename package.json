@@ -1,0 +1,24 @@
+{
+  "name": "prisoners-royale",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Prisoner's Dilemma Battle Royale",
+  "main": "server/index.ts",
+  "scripts": {
+    "dev": "tsx watch server/index.ts",
+    "build": "tsc && vite build",
+    "start": "node dist/server/index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.17",
+    "@types/node": "^20.11.16",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.12"
+  }
+}
