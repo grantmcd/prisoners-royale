@@ -1,6 +1,31 @@
+import { useState } from 'react'
 import LogicBuilder from '../components/LogicBuilder'
 
 function Strategy() {
+  const [simResult, setSimResult] = useState<any>(null)
+  const [loading, setLoading] = useState(false)
+
+  const runSimulation = async () => {
+    setLoading(true)
+    setSimResult(null)
+    try {
+      const res = await fetch('/api/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          strategies: ['AlwaysCooperate', 'AlwaysDefect', 'TitForTat', 'Random']
+        })
+      })
+      const data = await res.json()
+      setSimResult(data)
+    } catch (err) {
+      console.error(err)
+      setSimResult({ error: 'Simulation failed' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6 py-8">
       <div className="flex justify-between items-end border-b border-terminal-fg/30 pb-2">
@@ -22,10 +47,34 @@ function Strategy() {
             <button className="flex-1 bg-terminal-fg text-terminal-bg font-bold py-2 hover:bg-terminal-bg hover:text-terminal-fg border border-terminal-fg transition-colors">
               UPLOAD TO TERMINAL
             </button>
-            <button className="flex-1 border border-terminal-fg py-2 hover:bg-terminal-dim transition-colors">
-              TEST SIMULATION
+            <button 
+              onClick={runSimulation}
+              disabled={loading}
+              className="flex-1 border border-terminal-fg py-2 hover:bg-terminal-dim transition-colors disabled:opacity-50"
+            >
+              {loading ? 'SIMULATING...' : 'TEST SIMULATION'}
             </button>
           </div>
+
+          {simResult && (
+            <div className="border border-terminal-fg/20 p-4 bg-terminal-dim/10 text-xs font-mono">
+              <h3 className="font-bold border-b border-terminal-fg/30 mb-2">SIMULATION RESULTS</h3>
+              {simResult.error ? (
+                <div className="text-red-500">{simResult.error}</div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="text-terminal-accent text-lg">WINNER: {simResult.winner}</div>
+                  <div className="max-h-40 overflow-y-auto space-y-1 opacity-80">
+                    {simResult.log.map((round: any, i: number) => (
+                      <div key={i}>
+                        R{round.round}: {round.survivors} alive. Eliminated: {round.eliminated.map((p: any) => p.strategy).join(', ')}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="space-y-4 text-xs">
