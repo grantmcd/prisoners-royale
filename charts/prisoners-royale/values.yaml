@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/grantmcd/prisoners-royale
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
   tag: "latest"
 
 service:
@@ -15,7 +15,7 @@ ingress:
   annotations:
     tailscale.com/funnel: "true"
   hosts:
-    - host: prisoners.tailscale.net # Placeholder, will be replaced by actual funnel URL
+    - host: prisoners.tail05ac3b.ts.net
       paths:
         - path: /
           pathType: ImplementationSpecific
