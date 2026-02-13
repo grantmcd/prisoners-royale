@@ -1,0 +1,24 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/grantmcd/prisoners-royale
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  className: tailscale
+  annotations:
+    tailscale.com/funnel: "true"
+  hosts:
+    - host: prisoners.tailscale.net # Placeholder, will be replaced by actual funnel URL
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+
+env:
+  DATABASE_URL: "postgres://postgres:postgres@postgres-rw.cloudnative-pg.svc.cluster.local:5432/prisoners"
