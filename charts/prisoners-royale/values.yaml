@@ -13,7 +13,7 @@ ingress:
   enabled: true
   className: tailscale
   hosts:
-    - host: prisoners
+    - host: prisoners.tail05ac3b.ts.net
 
 env:
   DATABASE_URL: "postgres://postgres:postgres@postgres-rw.cloudnative-pg.svc.cluster.local:5432/prisoners"
