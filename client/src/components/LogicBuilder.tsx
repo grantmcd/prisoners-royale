@@ -14,11 +14,21 @@ export interface Node {
   no?: string
 }
 
-function LogicBuilder() {
+interface LogicBuilderProps {
+  onChange?: (graph: { nodes: Node[], edges: any[] }) => void
+}
+
+function LogicBuilder({ onChange }: LogicBuilderProps) {
   const [nodes, setNodes] = useState<Node[]>([
     { id: 'start', type: 'START', x: 50, y: 50, data: {} },
   ])
   const [edges, setEdges] = useState<{ id: string; from: string; to: string; type?: 'yes' | 'no' }[]>([])
+
+  useEffect(() => {
+    if (onChange) {
+      onChange({ nodes, edges })
+    }
+  }, [nodes, edges, onChange])
   const [connecting, setConnecting] = useState<{ nodeId: string; type?: 'yes' | 'no' } | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
@@ -68,6 +78,10 @@ function LogicBuilder() {
     if (id === 'start') return // Protect start node
     setNodes(prev => prev.filter(n => n.id !== id))
     setEdges(prev => prev.filter(e => e.from !== id && e.to !== id))
+  }
+
+  const updateNodeData = (id: string, data: any) => {
+    setNodes(prev => prev.map(n => n.id === id ? { ...n, data: { ...n.data, ...data } } : n))
   }
 
   const startConnection = (e: React.MouseEvent, nodeId: string, type?: 'yes' | 'no') => {
@@ -196,23 +210,31 @@ function LogicBuilder() {
             
             {node.type === 'MOVE' && (
                 <select 
+                    value={node.data.move || 'cooperate'}
+                    onChange={(e) => updateNodeData(node.id, { move: e.target.value.toLowerCase() })}
                     className="bg-terminal-dim text-terminal-fg border border-terminal-fg/30 outline-none w-full p-1 text-[10px]"
                     onMouseDown={(e) => e.stopPropagation()}
                 >
-                <option>COOPERATE</option>
-                <option>DEFECT</option>
+                <option value="cooperate">COOPERATE</option>
+                <option value="defect">DEFECT</option>
                 </select>
             )}
             
             {node.type === 'CONDITION' && (
                 <div className="space-y-1">
                 <select 
+                    value={`${node.data.conditionType || 'OPPONENT_LAST'}_${node.data.expectedMove || 'defect'}`}
+                    onChange={(e) => {
+                        const [type, move] = e.target.value.split('_');
+                        updateNodeData(node.id, { conditionType: type, expectedMove: move.toLowerCase() });
+                    }}
                     className="bg-terminal-dim text-terminal-fg border border-terminal-fg/30 outline-none w-full p-1 text-[10px]"
                     onMouseDown={(e) => e.stopPropagation()}
                 >
-                    <option>OPPONENT == COOP</option>
-                    <option>OPPONENT == DEFECT</option>
-                    <option>MY LAST == COOP</option>
+                    <option value="OPPONENT_LAST_defect">OPPONENT LAST == D</option>
+                    <option value="OPPONENT_LAST_cooperate">OPPONENT LAST == C</option>
+                    <option value="MY_LAST_defect">MY LAST == D</option>
+                    <option value="MY_LAST_cooperate">MY LAST == C</option>
                 </select>
                 </div>
             )}

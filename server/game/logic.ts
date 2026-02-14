@@ -14,6 +14,10 @@ export interface Strategy {
   makeMove(history: History): Move;
 }
 
+export function createCustomStrategy(name: string, makeMove: (history: History) => Move): Strategy {
+  return { name, makeMove };
+}
+
 // Strategies
 export const strategies: Record<string, Strategy> = {
   AlwaysCooperate: {
@@ -102,15 +106,21 @@ export function playRound(p1: Player, p2: Player) {
   return { p1Move: m1, p2Move: m2, p1Score: score1, p2Score: score2 };
 }
 
-export function runTournament(playerConfigs: string[]) {
+export function runTournament(playerConfigs: (string | Strategy)[]) {
   // Init players
-  let players: Player[] = playerConfigs.map((strat, i) => ({
-    id: `p${i}_${strat}`,
-    strategyName: strat,
-    score: 0,
-    alive: true,
-    history: {}
-  }));
+  let players: Player[] = playerConfigs.map((config, i) => {
+    const strat = typeof config === 'string' ? strategies[config] : config;
+    if (!strat) throw new Error(`Strategy not found: ${config}`);
+    
+    return {
+      id: `p${i}_${strat.name}`,
+      strategyName: strat.name,
+      score: 0,
+      alive: true,
+      history: {},
+      _instance: strat // Store the actual strategy object
+    };
+  });
 
   const roundsLog = [];
   let roundNum = 1;
@@ -118,16 +128,8 @@ export function runTournament(playerConfigs: string[]) {
   while (players.filter(p => p.alive).length > 1) {
     const activePlayers = players.filter(p => p.alive);
     
-    // Reset scores for the round? usually tournament accumulates, but Battle Royale implies survival of the fittest based on CURRENT performance?
-    // Let's assume scores reset each elimination round to test adaptation, OR accumulative?
-    // "Lowest total score is ELIMINATED" - implies accumulated, but if we don't reset, early lead dominates.
-    // Let's reset scores each "Elimination Round" (which consists of N pairwise matches).
     activePlayers.forEach(p => p.score = 0); 
     
-    const roundResults = [];
-
-    // Round Robin: Everyone plays everyone else
-    // Let's do 10 interactions per pair to allow TitForTat to work
     const INTERACTIONS_PER_MATCH = 10;
 
     for (let i = 0; i < activePlayers.length; i++) {
@@ -136,18 +138,33 @@ export function runTournament(playerConfigs: string[]) {
         const p2 = activePlayers[j];
         
         for (let k = 0; k < INTERACTIONS_PER_MATCH; k++) {
-           playRound(p1, p2);
+           // Refactored playRound logic inline or modified to accept instances
+           const s1 = (p1 as any)._instance;
+           const s2 = (p2 as any)._instance;
+
+           const h1 = p1.history[p2.id] || [];
+           const h2 = p2.history[p1.id] || [];
+
+           const m1 = s1.makeMove(h1);
+           const m2 = s2.makeMove(h2);
+
+           let score1 = 0, score2 = 0;
+           if (m1 === 'cooperate' && m2 === 'cooperate') { score1 = 3; score2 = 3; }
+           else if (m1 === 'defect' && m2 === 'defect') { score1 = 1; score2 = 1; }
+           else if (m1 === 'defect' && m2 === 'cooperate') { score1 = 5; score2 = 0; }
+           else { score1 = 0; score2 = 5; }
+
+           p1.score += score1; p2.score += score2;
+           if (!p1.history[p2.id]) p1.history[p2.id] = [];
+           if (!p2.history[p1.id]) p2.history[p1.id] = [];
+           p1.history[p2.id].push({ myMove: m1, opponentMove: m2 });
+           p2.history[p1.id].push({ myMove: m2, opponentMove: m1 });
         }
       }
     }
 
-    // Eliminate lowest
-    // Sort by score ascending
     activePlayers.sort((a, b) => a.score - b.score);
-    
-    // Find lowest score
     const lowestScore = activePlayers[0].score;
-    // Eliminate all with lowest score (could be multiple)
     const eliminated = activePlayers.filter(p => p.score === lowestScore);
     eliminated.forEach(p => p.alive = false);
 

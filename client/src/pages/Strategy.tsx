@@ -4,6 +4,7 @@ import LogicBuilder from '../components/LogicBuilder'
 function Strategy() {
   const [simResult, setSimResult] = useState<any>(null)
   const [loading, setLoading] = useState(false)
+  const [graph, setGraph] = useState<any>(null)
 
   const runSimulation = async () => {
     setLoading(true)
@@ -13,7 +14,8 @@ function Strategy() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          strategies: ['AlwaysCooperate', 'AlwaysDefect', 'TitForTat', 'Random', 'Grudger', 'Pavlov']
+          strategies: ['AlwaysCooperate', 'AlwaysDefect', 'TitForTat', 'Random', 'Grudger', 'Pavlov'],
+          customGraph: graph
         })
       })
       const data = await res.json()
@@ -41,7 +43,7 @@ function Strategy() {
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="md:col-span-3 space-y-4">
-          <LogicBuilder />
+          <LogicBuilder onChange={setGraph} />
           
           <div className="flex gap-4">
             <button className="flex-1 bg-terminal-fg text-terminal-bg font-bold py-2 hover:bg-terminal-bg hover:text-terminal-fg border border-terminal-fg transition-colors">
