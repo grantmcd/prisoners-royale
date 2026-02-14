@@ -31,6 +31,21 @@ export const strategies: Record<string, Strategy> = {
       return history[history.length - 1].opponentMove;
     }
   },
+  Grudger: {
+    name: 'Grudger',
+    makeMove: (history) => {
+      const opponentDefected = history.some(h => h.opponentMove === 'defect');
+      return opponentDefected ? 'defect' : 'cooperate';
+    }
+  },
+  Pavlov: {
+    name: 'Pavlov',
+    makeMove: (history) => {
+      if (history.length === 0) return 'cooperate';
+      const last = history[history.length - 1];
+      return last.myMove === last.opponentMove ? 'cooperate' : 'defect';
+    }
+  },
   Random: {
     name: 'Random',
     makeMove: () => Math.random() < 0.5 ? 'cooperate' : 'defect'
