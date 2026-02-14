@@ -13,11 +13,27 @@ spec:
   {{- if .Values.ingress.className }}
   ingressClassName: {{ .Values.ingress.className }}
   {{- end }}
+  {{- if .Values.ingress.hosts }}
+  rules:
+    {{- range .Values.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "prisoners-royale.fullname" $ }}
+                port:
+                  number: {{ $.Values.service.port }}
+    {{- end }}
+  {{- else }}
   defaultBackend:
     service:
       name: {{ include "prisoners-royale.fullname" . }}
       port:
         number: {{ .Values.service.port }}
+  {{- end }}
   tls:
     - hosts:
       {{- range .Values.ingress.hosts }}
