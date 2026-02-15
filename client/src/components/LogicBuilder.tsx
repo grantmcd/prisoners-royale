@@ -100,6 +100,14 @@ function LogicBuilder({ onChange, initialGraph }: LogicBuilderProps) {
 
   const completeConnection = (e: React.MouseEvent, targetNodeId: string) => {
     e.stopPropagation()
+    
+    // If we were dragging a node, this mouseUp is just the end of the drag.
+    // We shouldn't treat it as a connection attempt.
+    if (draggingId) {
+        setDraggingId(null)
+        return
+    }
+
     if (!connecting) return
     if (connecting.nodeId === targetNodeId) return // No self-loops
 
