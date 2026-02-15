@@ -23,12 +23,31 @@ interface TestMatchResult {
 function Strategy() {
   const [simResult, setSimResult] = useState<any>(null)
   const [loading, setLoading] = useState(false)
-  const [graph, setGraph] = useState<any>(null)
+  
+  // Initialize state from localStorage if available
+  const [graph, setGraph] = useState<any>(() => {
+    const saved = localStorage.getItem('pr_strategy_graph')
+    return saved ? JSON.parse(saved) : null
+  })
+  const [strategyName, setStrategyName] = useState(() => {
+    return localStorage.getItem('pr_strategy_name') || 'CustomOperative'
+  })
+
   const [compiledStrategy, setCompiledStrategy] = useState<CompiledStrategy | null>(null)
   const [compileError, setCompileError] = useState<string | null>(null)
-  const [strategyName, setStrategyName] = useState('CustomOperative')
   const [testResult, setTestResult] = useState<TestMatchResult | null>(null)
   const [activeTab, setActiveTab] = useState<'build' | 'test' | 'results'>('build')
+
+  // Persist changes
+  const handleGraphChange = (newGraph: any) => {
+    setGraph(newGraph)
+    localStorage.setItem('pr_strategy_graph', JSON.stringify(newGraph))
+  }
+
+  const handleNameChange = (newName: string) => {
+    setStrategyName(newName)
+    localStorage.setItem('pr_strategy_name', newName)
+  }
 
   const compileStrategy = async () => {
     if (!graph || graph.nodes.length <= 1) {
@@ -136,10 +155,22 @@ function Strategy() {
         <input
           type="text"
           value={strategyName}
-          onChange={(e) => setStrategyName(e.target.value)}
+          onChange={(e) => handleNameChange(e.target.value)}
           className="bg-terminal-bg border border-terminal-fg/30 p-2 text-sm flex-1 max-w-xs"
           placeholder="Enter strategy name..."
         />
+        <button 
+          onClick={() => {
+            if (confirm('Reset strategy to default?')) {
+              handleGraphChange(null) // LogicBuilder handles null -> default reset
+              handleNameChange('CustomOperative')
+              window.location.reload() // Force reload to clear LogicBuilder internal state easily
+            }
+          }}
+          className="text-[10px] text-red-400 hover:text-red-300 underline"
+        >
+          RESET DATA
+        </button>
       </div>
 
       {/* Tabs */}
@@ -164,7 +195,7 @@ function Strategy() {
       {/* Build Tab */}
       {activeTab === 'build' && (
         <div className="space-y-4">
-          <LogicBuilder onChange={setGraph} />
+          <LogicBuilder onChange={handleGraphChange} initialGraph={graph} />
           
           {compileError && (
             <div className="border border-red-500/50 p-4 bg-red-500/10 text-red-400 text-sm font-mono">
@@ -298,23 +329,82 @@ function Strategy() {
                 )}
               </div>
 
-              <div className="space-y-2">
-                <h3 className="font-bold border-b border-terminal-fg/30 pb-1">ELIMINATION LOG</h3>
-                {simResult.log.map((round: any, i: number) => (
-                  <div key={i} className="text-sm border-l-2 border-terminal-fg/20 pl-3 py-1">
-                    <div className="flex justify-between text-xs opacity-50">
-                      <span>ROUND {round.round}</span>
-                      <span>{round.survivors} SURVIVORS</span>
-                    </div>
-                    {round.eliminated.length > 0 ? (
-                      <div className="text-red-400 mt-1">
-                        ELIMINATED: {round.eliminated.map((e: any) => `${e.strategy} (${e.score})`).join(', ')}
+              <div className="space-y-4">
+                <h3 className="font-bold border-b border-terminal-fg/30 pb-1">LEADERBOARD</h3>
+                
+                {/* Aggregate Results */}
+                <div className="border border-terminal-fg/20 bg-terminal-dim/5">
+                  <table className="w-full text-sm text-left">
+                    <thead className="text-xs uppercase bg-terminal-fg/10 text-terminal-accent">
+                      <tr>
+                        <th className="px-4 py-2">Rank</th>
+                        <th className="px-4 py-2">Strategy</th>
+                        <th className="px-4 py-2">Rounds Survived</th>
+                        <th className="px-4 py-2 text-right">Avg Score</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {/* Calculate final stats from log */}
+                      {(() => {
+                        const stats = new Map<string, { survived: number, scoreSum: number, rounds: number }>();
+                        
+                        // Initialize all strategies
+                        const allStrats = new Set<string>();
+                        simResult.log.forEach((r: any) => {
+                          r.leaderboard.forEach((p: any) => allStrats.add(p.strategy));
+                          r.eliminated.forEach((p: any) => allStrats.add(p.strategy));
+                        });
+
+                        allStrats.forEach(s => stats.set(s, { survived: 0, scoreSum: 0, rounds: 0 }));
+
+                        simResult.log.forEach((r: any) => {
+                          // Everyone in leaderboard survived this round
+                          r.leaderboard.forEach((p: any) => {
+                            const s = stats.get(p.strategy)!;
+                            s.survived = r.round;
+                            s.scoreSum += p.score;
+                            s.rounds++;
+                          });
+                          // Eliminated players stopped here
+                          r.eliminated.forEach((p: any) => {
+                            const s = stats.get(p.strategy)!;
+                            s.survived = r.round - 1; // Eliminated at end of prev round effectively
+                            s.scoreSum += p.score;
+                            s.rounds++;
+                          });
+                        });
+
+                        return Array.from(stats.entries())
+                          .sort((a, b) => b[1].survived - a[1].survived || b[1].scoreSum/b[1].rounds - a[1].scoreSum/a[1].rounds)
+                          .map(([name, stat], i) => (
+                            <tr key={name} className={`border-b border-terminal-fg/10 ${name === strategyName ? 'bg-terminal-accent/10 font-bold' : ''}`}>
+                              <td className="px-4 py-2">#{i + 1}</td>
+                              <td className="px-4 py-2">{name}</td>
+                              <td className="px-4 py-2">{stat.survived}</td>
+                              <td className="px-4 py-2 text-right">{(stat.scoreSum / stat.rounds).toFixed(1)}</td>
+                            </tr>
+                          ));
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="space-y-2 mt-8">
+                  <h3 className="font-bold border-b border-terminal-fg/30 pb-1 opacity-50">ROUND LOGS</h3>
+                  {simResult.log.map((round: any, i: number) => (
+                    <div key={i} className="text-xs border-l-2 border-terminal-fg/10 pl-3 py-1 opacity-70 hover:opacity-100 transition-opacity">
+                      <div className="flex justify-between font-mono">
+                        <span className="text-terminal-accent">R{round.round}</span>
+                        <span>{round.survivors} LEFT</span>
                       </div>
-                    ) : (
-                      <div className="opacity-50 mt-1 italic">No eliminations (scores too close)</div>
-                    )}
-                  </div>
-                ))}
+                      {round.eliminated.length > 0 && (
+                        <div className="text-red-400 mt-1">
+                          💀 ELIMINATED: {round.eliminated.map((e: any) => `${e.strategy} (${e.score})`).join(', ')}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}
