@@ -16,13 +16,22 @@ export interface Node {
 
 interface LogicBuilderProps {
   onChange?: (graph: { nodes: Node[], edges: any[] }) => void
+  initialGraph?: { nodes: Node[], edges: any[] } | null
 }
 
-function LogicBuilder({ onChange }: LogicBuilderProps) {
-  const [nodes, setNodes] = useState<Node[]>([
+function LogicBuilder({ onChange, initialGraph }: LogicBuilderProps) {
+  const [nodes, setNodes] = useState<Node[]>(initialGraph?.nodes || [
     { id: 'start', type: 'START', x: 50, y: 50, data: {} },
   ])
-  const [edges, setEdges] = useState<{ id: string; from: string; to: string; type?: 'yes' | 'no' }[]>([])
+  const [edges, setEdges] = useState<{ id: string; from: string; to: string; type?: 'yes' | 'no' }[]>(initialGraph?.edges || [])
+
+  // Reset to default if initialGraph becomes null
+  useEffect(() => {
+    if (initialGraph === null) {
+      setNodes([{ id: 'start', type: 'START', x: 50, y: 50, data: {} }])
+      setEdges([])
+    }
+  }, [initialGraph])
 
   useEffect(() => {
     if (onChange) {
